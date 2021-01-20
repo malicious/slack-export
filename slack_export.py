@@ -21,6 +21,8 @@ def getHistory(pageableObject, channelId, pageSize = 100):
     messages = []
     lastTimestamp = None
 
+    last_time_progress_printed = 0
+
     while(True):
         response = pageableObject.history(
             channel = channelId,
@@ -31,10 +33,17 @@ def getHistory(pageableObject, channelId, pageSize = 100):
 
         messages.extend(response['messages'])
 
+        if len(messages) >= last_time_progress_printed + 1000:
+            latest_timestamp = datetime.fromtimestamp(float(messages[-1]['ts'])).strftime('%Y-%m-%d')
+            print(f"- fetched {len(messages)} messages, latest from {messages[-1]['ts']} - {latest_timestamp}')
+            last_time_progress_printed = len(messages)
+
         if (response['has_more'] == True):
             lastTimestamp = messages[-1]['ts'] # -1 means last element in a list
             sleep(1) # Respect the Slack API rate limit
         else:
+            if last_time_progress_printed > 0:
+                print(f"- finished fetching {len(messages)}")
             break
 
     messages.sort(key = lambda message: message['ts'])
@@ -183,9 +192,9 @@ def fetchDirectMessages(dms):
         print()
         return
 
-    for dm in dms:
+    for count, dm in enumerate(dms):
         name = userNamesById.get(dm['user'], dm['user'] + " (name unknown)")
-        print(u"Fetching 1:1 DMs with {0}".format(name))
+        print(f"Fetching 1:1 DMs with {name} - {count + 1} of {len(dms)}")
         dmId = dm['id']
         mkdir(dmId)
         messages = getHistory(slack.im, dm['id'])
@@ -206,11 +215,11 @@ def fetchGroups(groups):
         print()
         return
 
-    for group in groups:
+    for count, group in enumerate(groups):
         groupDir = group['name']
         mkdir(groupDir)
         messages = []
-        print(u"Fetching history for Private Channel / Group DM: {0}".format(group['name']))
+        print(f"Fetching history for Private Channel / Group DM: {group['name']} - {count + 1} of {len(groups)}")
         messages = getHistory(slack.groups, group['id'])
         parseMessages( groupDir, messages, 'group' )
 
