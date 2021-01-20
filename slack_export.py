@@ -338,6 +338,12 @@ if __name__ == "__main__":
     userNamesById = {}
     userIdsByName = {}
 
+    try:
+        import requests_cache
+        requests_cache.install_cache("demo_cache")
+    except ImportError:
+        pass
+
     slack = Slacker(args.token)
     testAuth = doTestAuth()
     tokenOwnerId = testAuth['user_id']
